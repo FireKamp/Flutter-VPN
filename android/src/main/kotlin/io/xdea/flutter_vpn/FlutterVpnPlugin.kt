@@ -114,7 +114,9 @@ class FlutterVpnPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             } else {
               result.success(false)
             }
-            listener?.let { activityBinding.removeActivityResultListener(it) };
+            Thread {
+              listener?.let { activityBinding.removeActivityResultListener(it) };
+            }.start()
             true
           }
           activityBinding.addActivityResultListener(listener)
