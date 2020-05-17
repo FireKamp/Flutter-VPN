@@ -22,6 +22,7 @@ import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
@@ -84,6 +85,9 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
     public static final String KEY_IS_RETRY = "retry";
     public static final int VPN_STATE_NOTIFICATION_ID = 1;
 
+    private String activityNameToLaunch;
+    private String packageIdentifierToLaunch;
+
     private String mLogFile;
     private String mAppDir;
     //    private VpnProfileDataSource mDataSource;
@@ -140,10 +144,12 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
            if (VPN_SERVICE_ACTION.equals(intent.getAction())||!DISCONNECT_ACTION.equals(intent.getAction())) {
                 Bundle bundle = intent.getExtras();
                 if (bundle != null) {
+                    packageIdentifierToLaunch = bundle.getString("PackageName");
+                    activityNameToLaunch = bundle.getString("ActivityName");
                     profile = new VpnProfile();
                     profile.setId(1);
                     profile.setUUID(UUID.randomUUID());
-                    profile.setName(bundle.getString("DisplayName"));
+                    profile.setName(bundle.getString("DisplayName") != null ? bundle.getString("DisplayName") : bundle.getString("Address"));
                     profile.setGateway(bundle.getString("Address"));
                     profile.setUsername(bundle.getString("UserName"));
                     profile.setPassword(bundle.getString("Password"));
@@ -438,10 +444,13 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
             builder.setPublicVersion(buildNotification(true));
         }
 
-//        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-//        PendingIntent pending = PendingIntent.getActivity(getApplicationContext(), 0, intent,
-//                PendingIntent.FLAG_UPDATE_CURRENT);
-//        builder.setContentIntent(pending);
+        if (packageIdentifierToLaunch != null && activityNameToLaunch != null) {
+            final Intent intent= new Intent();
+            intent.setComponent(new ComponentName(packageIdentifierToLaunch, activityNameToLaunch));
+            // invoked when tapped
+            final PendingIntent actionIntent = PendingIntent.getActivity(getApplicationContext(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+            builder.setContentIntent(actionIntent);
+        }
         return builder.build();
     }
 
