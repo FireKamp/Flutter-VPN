@@ -166,11 +166,12 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
             }
             setNextProfile(profile);
         }
-        return START_NOT_STICKY;
+        return START_STICKY;
     }
 
     @Override
     public void onCreate() {
+        Log.d(TAG, "onCreate in CharonVPNService");
         mLogFile = getFilesDir().getAbsolutePath() + File.separator + LOG_FILE;
         mAppDir = getFilesDir().getAbsolutePath();
 
@@ -189,17 +190,20 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
     @Override
     public void onRevoke() {    /* the system revoked the rights grated with the initial prepare() call.
      * called when the user clicks disconnect in the system's VPN dialog */
+        Log.d(TAG, "onRevoke in CharonVPNService");
         setNextProfile(null);
     }
 
     @Override
     public void onDestroy() {
+        Log.d(TAG, "onDestroy in CharonVPNService");
         mTerminate = true;
         setNextProfile(null);
         try {
             mConnectionHandler.join();
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Log.d(TAG, "onDestroy error in CharonVPNService: " + e.getLocalizedMessage());
         }
         if (mService != null) {
             mService.unregisterListener(this);
@@ -213,6 +217,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
      * @param profile the profile to initiate
      */
     private void setNextProfile(VpnProfile profile) {
+        Log.d(TAG, "setNextProfile in CharonVPNService");
         synchronized (this) {
             this.mNextProfile = profile;
             mProfileUpdated = true;
@@ -229,14 +234,17 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
                         wait();
                     }
 
+                    Log.d(TAG, "run, profile has been updated");
                     mProfileUpdated = false;
                     stopCurrentConnection();
                     if (mNextProfile == null) {
+                        Log.d(TAG, "run, profile has been updated, no next profile");
                         setState(State.DISABLED);
                         if (mTerminate) {
                             break;
                         }
                     } else {
+                        Log.d(TAG, "run, profile has been updated, has next profile");
                         mCurrentProfile = mNextProfile;
                         mNextProfile = null;
 
@@ -287,6 +295,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
                         }
                     }
                 } catch (InterruptedException ex) {
+                    Log.d(TAG, "run, exception: " + ex.getLocalizedMessage());
                     stopCurrentConnection();
                     setState(State.DISABLED);
                 }
@@ -327,6 +336,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
         mHandler.post(new Runnable() {
             @Override
             public void run() {
+                Log.d(TAG, "add notification, charonvpnservice");
                 mShowNotification = true;
                 startForeground(VPN_STATE_NOTIFICATION_ID, buildNotification(false));
             }
@@ -340,6 +350,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
         mHandler.post(new Runnable() {
             @Override
             public void run() {
+                Log.d(TAG, "remove notification, charonvpnservice");
                 mShowNotification = false;
                 stopForeground(true);
             }
@@ -457,6 +468,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
     @Override
     public void stateChanged() {
         if (mShowNotification) {
+            Log.d(TAG, "state changed, charonvpnservice");
             NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             manager.notify(VPN_STATE_NOTIFICATION_ID, buildNotification(false));
         }
@@ -471,6 +483,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
     private void startConnection(VpnProfile profile) {
         synchronized (mServiceLock) {
             if (mService != null) {
+                Log.d(TAG, "start connection, charonvpnservice");
                 mService.startConnection(profile);
             }
         }
@@ -485,6 +498,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
     private void setState(State state) {
         synchronized (mServiceLock) {
             if (mService != null) {
+                Log.d(TAG, "setState, charonvpnservice: " + state.name());
                 mService.setState(state);
             }
         }
@@ -499,6 +513,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
     private void setError(ErrorState error) {
         synchronized (mServiceLock) {
             if (mService != null) {
+                Log.d(TAG, "setError, charonvpnservice: " + error.name());
                 mService.setError(error);
             }
         }
