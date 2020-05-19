@@ -31,8 +31,8 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import org.strongswan.android.logic.VpnStateService
 import io.flutter.plugin.common.PluginRegistry
+import org.strongswan.android.logic.VpnStateService
 
 /** FlutterVpnPlugin */
 class FlutterVpnPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
@@ -107,16 +107,20 @@ class FlutterVpnPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
       "prepare" -> {
         val intent = VpnService.prepare(activityBinding.activity.applicationContext)
         if (intent != null) {
+          var isListenerCalled = false;
           var listener: PluginRegistry.ActivityResultListener? = null
           listener = PluginRegistry.ActivityResultListener { req, res, _ ->
-            if (req == 0 && res == RESULT_OK) {
-              result.success(true)
-            } else {
-              result.success(false)
+            if (!isListenerCalled) {
+              isListenerCalled = true;
+              if (req == 0 && res == RESULT_OK) {
+                result.success(true)
+              } else {
+                result.success(false)
+              }
+              Thread {
+                listener?.let { activityBinding.removeActivityResultListener(it) }
+              }.start()
             }
-            Thread {
-              listener?.let { activityBinding.removeActivityResultListener(it) };
-            }.start()
             true
           }
           activityBinding.addActivityResultListener(listener)
