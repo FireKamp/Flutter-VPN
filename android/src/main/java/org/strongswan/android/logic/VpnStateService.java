@@ -27,6 +27,8 @@ import android.os.SystemClock;
 
 import androidx.core.content.ContextCompat;
 
+import com.firekamp.flutter_unprotected_wifi.FlutterUnprotectedWifiPlugin;
+
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
@@ -97,7 +99,7 @@ public class VpnStateService extends Service {
     public void onCreate() {
         /* this handler allows us to notify listeners from the UI thread and
          * not from the threads that actually report any state changes */
-        mHandler = new RetryHandler(this);
+        mHandler = new RetryHandler(this, getApplicationContext());
     }
 
     @Override
@@ -261,9 +263,8 @@ public class VpnStateService extends Service {
      *                    previous profile if null
      * @param fromScratch true if this is a manual retry/reconnect or a completely new connection
      */
-    public void connect(Bundle profileInfo, boolean fromScratch) {
+    public void connect(Bundle profileInfo, boolean fromScratch, Context context) {
         /* we assume we have the necessary permission */
-        Context context = getApplicationContext();
         Intent intent = new Intent(context, CharonVpnService.class);
         if (profileInfo == null) {
             profileInfo = mProfileInfo;
@@ -274,6 +275,9 @@ public class VpnStateService extends Service {
             /* reset if this is a manual retry or a new connection */
             mTimeoutProvider.reset();
         } else {    /* mark this as an automatic retry */
+            if(profileInfo==null) {
+                profileInfo = FlutterUnprotectedWifiPlugin.getConfigurationBundle(context);
+            }
             profileInfo.putBoolean(CharonVpnService.KEY_IS_RETRY, true);
         }
         intent.putExtras(profileInfo);
@@ -447,9 +451,11 @@ public class VpnStateService extends Service {
      */
     private static class RetryHandler extends Handler {
         WeakReference<VpnStateService> mService;
+        Context context;
 
-        public RetryHandler(VpnStateService service) {
+        public RetryHandler(VpnStateService service, Context context) {
             mService = new WeakReference<>(service);
+            this.context = context;
         }
 
         @Override
@@ -468,7 +474,7 @@ public class VpnStateService extends Service {
                 }
                 sendMessageAtTime(obtainMessage(RETRY_MSG), next);
             } else {
-                mService.get().connect(null, false);
+                mService.get().connect(null, false, context);
             }
         }
     }
