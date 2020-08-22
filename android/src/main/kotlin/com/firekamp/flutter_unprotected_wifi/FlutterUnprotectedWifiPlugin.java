@@ -28,6 +28,3 @@ public class FlutterUnprotectedWifiPlugin {
         return profileInfo;
     }
 }
-
-
-
