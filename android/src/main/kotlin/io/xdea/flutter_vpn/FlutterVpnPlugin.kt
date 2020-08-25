@@ -23,6 +23,9 @@ import android.net.VpnService
 import android.os.Bundle
 import android.os.IBinder
 import androidx.annotation.NonNull
+import com.firekamp.flutter_unprotected_wifi.NetworkHelper
+import com.firekamp.flutter_unprotected_wifi.SecuredWifiCheckForegroundService
+import com.firekamp.flutter_unprotected_wifi.UnProtectedWiFiConfiguration
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -44,6 +47,8 @@ class FlutterVpnPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
   /// when the Flutter Engine is detached from the Activity
   private lateinit var channel: MethodChannel
   private lateinit var eventChannel: EventChannel
+  private val mtuDefaultValue = 1400
+  private val vpnTypeDefaultValue = "ikev2-eap"
 
   private var vpnStateService: VpnStateService? = null
   private val _serviceConnection = object : ServiceConnection {
@@ -147,10 +152,10 @@ class FlutterVpnPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         profileInfo.putString("UserName", map["username"])
         profileInfo.putString("DisplayName", map["displayName"])
         profileInfo.putString("Password", map["password"])
-        profileInfo.putString("VpnType", "ikev2-eap")
-        profileInfo.putInt("MTU", map["mtu"]?.toInt() ?: 1400)
+        profileInfo.putString("VpnType", vpnTypeDefaultValue)
+        profileInfo.putInt("MTU", map["mtu"]?.toInt() ?: mtuDefaultValue)
 
-        vpnStateService?.connect(profileInfo, true)
+        vpnStateService?.connect(profileInfo, true,activityBinding.activity)
         result.success(true)
       }
       "getCurrentState" -> {
@@ -161,6 +166,42 @@ class FlutterVpnPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
       }
       "getCharonErrorState" -> result.success(vpnStateService?.errorState?.ordinal)
       "disconnect" -> vpnStateService?.disconnect()
+      "configure" -> {
+        val map = call.arguments as HashMap<String, String>
+        val unProtectedWiFiConfiguration = UnProtectedWiFiConfiguration(
+                map["appName"],
+                map["notificationResourceId"],
+                map["serviceNotificationTitle"],
+                map["serviceNotificationBody"],
+                map["warnTitle"],
+                map["warnBody"],
+                map["autoConnectTitle"],
+                map["autoConnectBody"],
+                map["activityClassName"],
+                map["packageName"],
+                map["userName"],
+                map["displayName"],
+                map["password"],
+                map["address"],
+                vpnTypeDefaultValue,
+                map["mtu"]?.toInt() ?: mtuDefaultValue,
+                map["isAutoConnect"]?.toBoolean() ?: false,
+                map["isWarn"]?.toBoolean() ?: false
+        )
+        unProtectedWiFiConfiguration.savedConfiguration(unProtectedWiFiConfiguration,activityBinding.activity)
+      }
+      "startMonitoring" ->
+      {
+        val toConnect = call.arguments?.toString()?.toBoolean() ?: false
+        SecuredWifiCheckForegroundService.startService(activityBinding.activity,toConnect);
+      }
+      "isSecuredWiFi" -> {
+        val networkHelper = NetworkHelper()
+        val isSecured = networkHelper.isSecuredWiFi(activityBinding.activity)
+        result.success(isSecured)
+      }
+      "stopMonitoring" ->
+        SecuredWifiCheckForegroundService.stopService(activityBinding.activity)
       else -> result.notImplemented()
     }
   }

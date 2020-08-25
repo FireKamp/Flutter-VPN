@@ -87,12 +87,31 @@ class FlutterVpn {
     await _channel.invokeMethod('disconnect');
   }
 
+  static Future<bool> isSecuredWiFi() async {
+    return await _channel.invokeMethod('isSecuredWiFi');
+  }
+
+  static Future<Null> startMonitor(bool connect) async {
+    await _channel.invokeMethod('startMonitoring',connect.toString());
+  }
+
+  static Future<Null> stopMonitor() async {
+    await _channel.invokeMethod('stopMonitoring');
+  }
+
   /// Connect to VPN.
   ///
   /// Use given credentials to connect VPN (ikev2-eap).
   /// This will create a background VPN service.
   /// MTU is only available on android.
-  static Future<Null> simpleConnect(String address, String username, String password, String displayName, String packageName, String activityName,  {int mtu = 1400}) async {
+  static Future<Null> simpleConnect(
+      String address,
+      String username,
+      String password,
+      String displayName,
+      String packageName,
+      String activityName,
+      {int mtu = 1400}) async {
     await _channel.invokeMethod('connect', {
       'address': address,
       'username': username,
@@ -101,6 +120,44 @@ class FlutterVpn {
       'packageName': packageName,
       'activityName': activityName,
       'mtu': mtu.toString()
+    });
+  }
+
+  static Future<Null> unProtectedWiFiConfigure(
+      String appName,
+      String notificationResourceId,
+      String serviceNotificationTitle,
+      String serviceNotificationBody,
+      String warnTitle,
+      String warnBody,
+      String autoConnectTitle,
+      String autoConnectBody,
+      String activityClassName,
+      String packageName,
+      String userName,
+      String displayName,
+      String password,
+      String address,
+      bool isAutoConnect,
+      bool isWarn,
+      ) async {
+    await _channel.invokeMethod('configure', {
+      'appName': appName,
+      'notificationResourceId': notificationResourceId,
+      'serviceNotificationTitle': serviceNotificationTitle,
+      'serviceNotificationBody': serviceNotificationBody,
+      'warnTitle': warnTitle,
+      'warnBody': warnBody,
+      'autoConnectTitle': autoConnectTitle,
+      'autoConnectBody': autoConnectBody,
+      'activityClassName': activityClassName,
+      'packageName': packageName,
+      'userName': userName,
+      'displayName': displayName,
+      'password': password,
+      'address': address,
+      "isAutoConnect": isAutoConnect.toString(),
+      "isWarn": isWarn.toString()
     });
   }
 }
